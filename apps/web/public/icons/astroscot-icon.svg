@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">AstroScot app icon</title>
+  <rect width="512" height="512" rx="112" fill="#172554"/>
+  <circle cx="164" cy="166" r="58" fill="#fde68a"/>
+  <path d="M354 132c-66 20-116 74-130 141-9 43-1 84 18 119 7 13 25 10 28-5 17-86 85-154 171-171 15-3 18-21 5-28-28-15-60-22-92-56Z" fill="#a5f3fc"/>
+  <circle cx="356" cy="324" r="18" fill="#f9a8d4"/>
+  <circle cx="112" cy="330" r="10" fill="#ffffff"/>
+  <circle cx="404" cy="92" r="9" fill="#ffffff"/>
+  <circle cx="276" cy="88" r="7" fill="#ffffff"/>
+</svg>
