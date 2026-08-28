@@ -1,0 +1,17 @@
+{
+  "name": "@astroscot/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts --local",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astroscot/shared": "file:../../shared"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "wrangler": "latest"
+  }
+}
