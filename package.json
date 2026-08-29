@@ -1,0 +1,22 @@
+{
+  "name": "astroscot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AstroScot is an iPad-first PWA that gives children a friendly daily weather and sky guide.",
+  "type": "module",
+  "scripts": {
+    "dev:web": "npm run dev --workspace @astroscot/web",
+    "build:web": "npm run build --workspace @astroscot/web",
+    "preview:web": "npm run preview --workspace @astroscot/web",
+    "dev:api": "npm run dev --workspace @astroscot/api",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "workspaces": [
+    "apps/web",
+    "workers/api",
+    "shared"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}
