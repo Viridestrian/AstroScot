@@ -2,14 +2,14 @@
   "name": "AstroScot",
   "short_name": "AstroScot",
   "description": "A friendly daily weather and sky guide for children.",
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#172554",
   "theme_color": "#172554",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icons/astroscot-icon.svg",
+      "src": "/icons/astroscot-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
