@@ -22,7 +22,8 @@ body {
     linear-gradient(135deg, #08111f 0%, #172554 46%, #312e81 100%);
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -129,6 +130,11 @@ h1 {
   background: rgba(30, 41, 59, 0.72);
 }
 
+.location-copy {
+  min-width: 0;
+  flex: 1;
+}
+
 .location-panel h2 {
   margin-bottom: 8px;
   font-size: clamp(1.35rem, 3vw, 2rem);
@@ -148,7 +154,76 @@ h1 {
   color: #172554;
   background: #fde68a;
   font-weight: 900;
-  cursor: not-allowed;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.location-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.location-search {
+  width: min(100%, 460px);
+}
+
+.location-search label {
+  display: block;
+  margin-bottom: 8px;
+  color: #dbeafe;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.location-search-row {
+  display: flex;
+  gap: 10px;
+}
+
+.location-search input {
+  min-width: 0;
+  flex: 1;
+  min-height: 56px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 18px;
+  outline: none;
+  color: #0f172a;
+  background: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.location-search input:focus {
+  box-shadow: 0 0 0 3px rgba(253, 230, 138, 0.65);
+}
+
+.location-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.location-result {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  text-align: left;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.86);
+  cursor: pointer;
+}
+
+.location-result:hover,
+.location-result:focus-visible {
+  background: rgba(51, 65, 85, 0.95);
+}
+
+.location-result span {
+  color: #cbd5e1;
+  font-size: 0.9rem;
 }
 
 .card-grid {
@@ -247,8 +322,16 @@ h1 {
     min-height: auto;
   }
 
+  .location-search {
+    width: 100%;
+  }
+
   .location-button {
     width: 100%;
+  }
+
+  .location-search-row {
+    flex-direction: column;
   }
 }
 
