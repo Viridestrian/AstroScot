@@ -101,13 +101,13 @@ function WeatherCard({ location }: { location: AstroScotLocation }) {
   const feelsLike = current ? feelsLikeMessage(current.temperature_2m, current.apparent_temperature) : null;
   return (
     <article className="info-card weather-card">
-      <div className="card-header"><div><p className="card-eyebrow">Weather</p><h2>{daily ? formatDate(daily.time[0], location.timezone) : 'Today outside'}</h2></div><span className="card-icon" aria-hidden="true">☀️</span></div>
+      <div className="card-header"><div><p className="card-eyebrow">Weather</p><h2 style={{ whiteSpace: 'nowrap' }}>{daily ? formatDate(daily.time[0], location.timezone) : 'Today outside'}</h2></div><span className="card-icon" aria-hidden="true">☀️</span></div>
       {status === 'idle' && <p className="placeholder-note">Choose a location above and AstroScot will show today’s weather here.</p>}
       {status === 'loading' && <p className="placeholder-note">Checking the sky outside…</p>}
       {status === 'error' && <p className="placeholder-note">AstroScot could not get the weather right now. Try again in a moment.</p>}
       {status === 'ready' && weather && daily && current && (
         <div className="weather-content">
-          <div className="weather-current"><div className="weather-condition"><span className="weather-condition-icon" aria-hidden="true">{weatherIcon(current.weather_code)}</span><strong>{weatherDescription(current.weather_code)}</strong>{feelsLike && <span>{feelsLike}</span>}<span className="weather-temperature">{Math.round(current.temperature_2m)}°</span></div></div>
+          <div className="weather-current"><div className="weather-condition" style={{ width: '100%', alignItems: 'center', textAlign: 'center' }}><span className="weather-condition-icon" aria-hidden="true">{weatherIcon(current.weather_code)}</span><strong>{weatherDescription(current.weather_code)}</strong>{feelsLike && <span>{feelsLike}</span>}<span className="weather-temperature">{Math.round(current.temperature_2m)}°</span></div></div>
           <div className="weather-summary"><div><span>High</span><strong>{Math.round(daily.temperature_2m_max[0])}°</strong></div><div><span>Low</span><strong>{Math.round(daily.temperature_2m_min[0])}°</strong></div></div>
           <div className="weather-rain"><span>🌧️ Rain chance</span><strong>{rainMessage(probability, weather.hourly, location.timezone)}</strong></div>
           <div className="weather-times"><span>🌅 Sunrise {formatTime(daily.sunrise[0], location.timezone)}</span><span>🌇 Sunset {formatTime(daily.sunset[0], location.timezone)}</span></div>
