@@ -57,6 +57,25 @@ function weatherDescription(code: number) {
   if ([95, 96, 99].includes(code)) return 'Thunderstorms'; return 'Mixed weather';
 }
 
+function weatherIcon(code: number) {
+  if (code === 0) return '☀️';
+  if ([1, 2].includes(code)) return '🌤️';
+  if (code === 3) return '☁️';
+  if ([45, 48].includes(code)) return '🌫️';
+  if ([51, 53, 55, 56, 57].includes(code)) return '🌦️';
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return '🌧️';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return '🌨️';
+  if ([95, 96, 99].includes(code)) return '⛈️';
+  return '🌤️';
+}
+
+function feelsLikeMessage(actual: number, apparent: number) {
+  const difference = apparent - actual;
+  if (Math.abs(difference) <= 2) return null;
+  if (difference > 0) return 'It feels a little warmer outside.';
+  return 'It feels a little colder outside.';
+}
+
 function formatTime(value: string, timezone: string) {
   return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: timezone }).format(new Date(value));
 }
@@ -81,6 +100,7 @@ function WeatherCard({ location }: { location: AstroScotLocation }) {
   }, [location]);
   const daily = weather?.daily; const current = weather?.current;
   const probability = daily ? Math.round(daily.precipitation_probability_max[0]) : 0;
+  const feelsLike = current ? feelsLikeMessage(current.temperature_2m, current.apparent_temperature) : null;
   return (
     <article className="info-card weather-card">
       <div className="card-header"><div><p className="card-eyebrow">Weather</p><h2>Today outside</h2></div><span className="card-icon" aria-hidden="true">☀️</span></div>
@@ -89,7 +109,7 @@ function WeatherCard({ location }: { location: AstroScotLocation }) {
       {status === 'error' && <p className="placeholder-note">AstroScot could not get the weather right now. Try again in a moment.</p>}
       {status === 'ready' && weather && daily && current && (
         <div className="weather-content">
-          <div className="weather-current"><span className="weather-temperature">{Math.round(current.temperature_2m)}°</span><div><strong>{weatherDescription(current.weather_code)}</strong><span>Feels like {Math.round(current.apparent_temperature)}°</span></div></div>
+          <div className="weather-current"><span className="weather-temperature">{Math.round(current.temperature_2m)}°</span><div><span className="weather-condition-icon" aria-hidden="true">{weatherIcon(current.weather_code)}</span><strong>{weatherDescription(current.weather_code)}</strong>{feelsLike && <span>{feelsLike}</span>}</div></div>
           <div className="weather-summary"><div><span>High</span><strong>{Math.round(daily.temperature_2m_max[0])}°</strong></div><div><span>Low</span><strong>{Math.round(daily.temperature_2m_min[0])}°</strong></div></div>
           <div className="weather-rain"><span>🌧️ Rain chance</span><strong>{rainMessage(probability, weather.hourly, location.timezone)}</strong></div>
           <div className="weather-times"><span>🌅 Sunrise {formatTime(daily.sunrise[0], location.timezone)}</span><span>🌇 Sunset {formatTime(daily.sunset[0], location.timezone)}</span></div>
