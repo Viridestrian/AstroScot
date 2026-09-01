@@ -13,6 +13,7 @@ const prototypeLocation: AstroScotLocation = {
 };
 
 type LocationStatus = 'idle' | 'loading' | 'ready' | 'error';
+type WeatherStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface GeocodingResult {
   id: number;
@@ -29,15 +30,25 @@ interface GeocodingResponse {
   results?: GeocodingResult[];
 }
 
+interface WeatherResponse {
+  current: {
+    temperature_2m: number;
+    apparent_temperature: number;
+    weather_code: number;
+    wind_speed_10m: number;
+  };
+  daily: {
+    time: string[];
+    weather_code: number[];
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+    precipitation_probability_max: number[];
+    sunrise: string[];
+    sunset: string[];
+  };
+}
+
 const cards = [
-  {
-    eyebrow: 'Weather',
-    title: 'Today outside',
-    icon: '☀️',
-    className: 'weather-card',
-    items: ['Current temperature', "Today's high and low", 'Rain or snow chance', 'Wind, sunrise, and sunset'],
-    message: 'Weather details will appear here after Open-Meteo is connected.',
-  },
   {
     eyebrow: 'Moon',
     title: 'Moon mission',
@@ -73,9 +84,126 @@ async function searchLocations(query: string): Promise<GeocodingResult[]> {
   return data.results ?? [];
 }
 
+async function fetchWeather(location: AstroScotLocation): Promise<WeatherResponse> {
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
+    temperature_unit: 'fahrenheit',
+    wind_speed_unit: 'mph',
+    timezone: location.timezone,
+    forecast_days: '1',
+  });
+
+  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!response.ok) {
+    throw new Error(`Weather request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as WeatherResponse;
+}
+
 function formatLocation(result: GeocodingResult) {
   const region = result.admin1 || result.country || '';
   return region ? `${result.name}, ${region}` : result.name;
+}
+
+function weatherDescription(code: number) {
+  if (code === 0) return 'Clear sky';
+  if (code === 1) return 'Mostly clear';
+  if (code === 2) return 'Partly cloudy';
+  if (code === 3) return 'Cloudy';
+  if ([45, 48].includes(code)) return 'Foggy';
+  if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle';
+  if ([61, 63, 65, 66, 67].includes(code)) return 'Rainy';
+  if ([71, 73, 75, 77].includes(code)) return 'Snowy';
+  if ([80, 81, 82].includes(code)) return 'Rain showers';
+  if ([85, 86].includes(code)) return 'Snow showers';
+  if ([95, 96, 99].includes(code)) return 'Thunderstorms';
+  return 'Mixed weather';
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function WeatherCard({ location }: { location: AstroScotLocation }) {
+  const [weather, setWeather] = useState<WeatherResponse | null>(null);
+  const [status, setStatus] = useState<WeatherStatus>('idle');
+
+  useEffect(() => {
+    if (!location || location.latitude === 0 && location.longitude === 0) {
+      setWeather(null);
+      setStatus('idle');
+      return;
+    }
+
+    let cancelled = false;
+    setStatus('loading');
+
+    fetchWeather(location)
+      .then((data) => {
+        if (!cancelled) {
+          setWeather(data);
+          setStatus('ready');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location]);
+
+  const daily = weather?.daily;
+  const current = weather?.current;
+
+  return (
+    <article className="info-card weather-card">
+      <div className="card-header">
+        <div>
+          <p className="card-eyebrow">Weather</p>
+          <h2>Today outside</h2>
+        </div>
+        <span className="card-icon" aria-hidden="true">☀️</span>
+      </div>
+
+      {status === 'idle' && (
+        <p className="placeholder-note">Choose a location above and AstroScot will show today’s weather here.</p>
+      )}
+      {status === 'loading' && <p className="placeholder-note">Checking the sky outside…</p>}
+      {status === 'error' && <p className="placeholder-note">AstroScot could not get the weather right now. Try again in a moment.</p>}
+
+      {status === 'ready' && weather && daily && current && (
+        <div className="weather-content">
+          <div className="weather-current">
+            <span className="weather-temperature">{Math.round(current.temperature_2m)}°</span>
+            <div>
+              <strong>{weatherDescription(current.weather_code)}</strong>
+              <span>Feels like {Math.round(current.apparent_temperature)}°</span>
+            </div>
+          </div>
+
+          <div className="weather-summary">
+            <div><span>High</span><strong>{Math.round(daily.temperature_2m_max[0])}°</strong></div>
+            <div><span>Low</span><strong>{Math.round(daily.temperature_2m_min[0])}°</strong></div>
+            <div><span>Rain chance</span><strong>{Math.round(daily.precipitation_probability_max[0])}%</strong></div>
+          </div>
+
+          <div className="weather-times">
+            <span>🌅 Sunrise {formatTime(daily.sunrise[0])}</span>
+            <span>🌇 Sunset {formatTime(daily.sunset[0])}</span>
+          </div>
+        </div>
+      )}
+    </article>
+  );
 }
 
 export function App() {
@@ -222,6 +350,7 @@ export function App() {
       </section>
 
       <section className="card-grid" aria-label="AstroScot daily cards">
+        <WeatherCard location={location} />
         {cards.map((card) => (
           <InfoCard key={card.title} {...card} />
         ))}
