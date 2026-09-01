@@ -124,10 +124,11 @@ function weatherDescription(code: number) {
   return 'Mixed weather';
 }
 
-function formatTime(value: string) {
+function formatTime(value: string, timezone: string) {
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: timezone,
   }).format(new Date(value));
 }
 
@@ -136,7 +137,7 @@ function WeatherCard({ location }: { location: AstroScotLocation }) {
   const [status, setStatus] = useState<WeatherStatus>('idle');
 
   useEffect(() => {
-    if (!location || location.latitude === 0 && location.longitude === 0) {
+    if (!location || (location.latitude === 0 && location.longitude === 0)) {
       setWeather(null);
       setStatus('idle');
       return;
@@ -197,8 +198,8 @@ function WeatherCard({ location }: { location: AstroScotLocation }) {
           </div>
 
           <div className="weather-times">
-            <span>🌅 Sunrise {formatTime(daily.sunrise[0])}</span>
-            <span>🌇 Sunset {formatTime(daily.sunset[0])}</span>
+            <span>🌅 Sunrise {formatTime(daily.sunrise[0], location.timezone)}</span>
+            <span>🌇 Sunset {formatTime(daily.sunset[0], location.timezone)}</span>
           </div>
         </div>
       )}
