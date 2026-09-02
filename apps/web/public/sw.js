@@ -1,4 +1,4 @@
-const CACHE_NAME = 'astroscot-shell-v2';
+const CACHE_NAME = 'myskyally-shell-v3';
 const APP_SHELL = ['./', './manifest.webmanifest', './icons/astroscot-icon.svg'];
 
 self.addEventListener('install', (event) => {
