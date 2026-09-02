@@ -1,6 +1,6 @@
 {
-  "name": "AstroScot",
-  "short_name": "AstroScot",
+  "name": "My Sky Ally",
+  "short_name": "My Sky Ally",
   "description": "A friendly daily weather and sky guide for children.",
   "start_url": "/",
   "display": "standalone",
