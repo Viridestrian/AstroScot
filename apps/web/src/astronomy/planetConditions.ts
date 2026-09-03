@@ -18,6 +18,8 @@ export interface PlanetCondition {
   magnitude: number | null;
   rise: Date | null;
   set: Date | null;
+  visibleFrom: Date | null;
+  visibleUntil: Date | null;
 }
 
 export interface PlanetConditionsData {
@@ -204,6 +206,8 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
   let bestMagnitude: number | null = null;
   let rise: Date | null = null;
   let set: Date | null = null;
+  let visibleFrom: Date | null = null;
+  let visibleUntil: Date | null = null;
   let wasAbove = false;
   let previousAltitude = altitudeAndAzimuth(sunset, location.latitude, location.longitude, planetEquatorial(sunset, planet).ra, planetEquatorial(sunset, planet).dec).altitude;
   let usefulMinutes = 0;
@@ -222,6 +226,8 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
     if (previousAltitude >= 0 && horizontal.altitude < 0) set = time;
     if (practical) {
       usefulMinutes += 5;
+      if (!visibleFrom) visibleFrom = time;
+      visibleUntil = time;
       if (bestAltitude === null || horizontal.altitude > bestAltitude) {
         bestTime = time;
         bestAltitude = horizontal.altitude;
@@ -247,7 +253,7 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
   else if (bestMagnitude !== null && bestMagnitude > 2.5) reason = 'It is too faint for a typical naked-eye sight.';
   else if (planet === 'Mercury') reason = 'It is too close to the Sun for an easy evening sight.';
 
-  return { name: planet, symbol: definition.symbol, visible, status, reason, bestTime, bestAltitude, direction: bestTime ? directionName(bestAzimuth) : null, magnitude: bestMagnitude, rise, set };
+  return { name: planet, symbol: definition.symbol, visible, status, reason, bestTime, bestAltitude, direction: bestTime ? directionName(bestAzimuth) : null, magnitude: bestMagnitude, rise, set, visibleFrom, visibleUntil };
 }
 
 export function calculatePlanetConditions(location: PlanetConditionsLocation, now = new Date()): PlanetConditionsData | null {
