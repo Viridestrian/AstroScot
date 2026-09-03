@@ -38,8 +38,6 @@ type OrbitalElements = {
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
 const DAY_MS = 86400000;
-const EARTH_RADIUS_AU = 0.000042634;
-const AU_KM = 149597870.7;
 
 const PLANETS: Record<PlanetName, { symbol: string; elements: (d: number) => OrbitalElements; magnitudeBase: number; magnitudeSlope: number; nakedEye: boolean }> = {
   Mercury: { symbol: '☿', elements: mercuryElements, magnitudeBase: -0.4, magnitudeSlope: 0.03, nakedEye: true },
@@ -85,9 +83,13 @@ function heliocentricEcliptic(elements: OrbitalElements) {
   };
 }
 
+function earthElements(d: number): OrbitalElements {
+  return { N: 0, i: 0, w: 282.9404 + 4.70935e-5 * d, a: 1, e: 0.016709 - 1.151e-9 * d, M: 356.047 + 0.9856002585 * d + 180 };
+}
+
 function planetEquatorial(date: Date, planet: PlanetName) {
   const d = daysSince2000(date);
-  const earth = heliocentricEcliptic({ N: 0, i: 0, w: 282.9404 + 4.70935e-5 * d, a: 1, e: 0.016709 - 1.151e-9 * d, M: 356.047 + 0.9856002585 * d });
+  const earth = heliocentricEcliptic(earthElements(d));
   const target = heliocentricEcliptic(PLANETS[planet].elements(d));
   const xh = target.x - earth.x;
   const yh = target.y - earth.y;
@@ -121,7 +123,7 @@ function altitudeAndAzimuth(date: Date, latitude: number, longitude: number, ra:
 
 function solarPosition(date: Date, latitude: number, longitude: number) {
   const d = daysSince2000(date);
-  const earth = heliocentricEcliptic({ N: 0, i: 0, w: 282.9404 + 4.70935e-5 * d, a: 1, e: 0.016709 - 1.151e-9 * d, M: 356.047 + 0.9856002585 * d });
+  const earth = heliocentricEcliptic(earthElements(d));
   const sunX = -earth.x;
   const sunY = -earth.y;
   const sunZ = -earth.z;
@@ -203,7 +205,6 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
   let rise: Date | null = null;
   let set: Date | null = null;
   let wasAbove = false;
-  let previousTime = sunset;
   let previousAltitude = altitudeAndAzimuth(sunset, location.latitude, location.longitude, planetEquatorial(sunset, planet).ra, planetEquatorial(sunset, planet).dec).altitude;
   let usefulMinutes = 0;
   const step = 5 * 60000;
@@ -215,7 +216,7 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
     const sunAltitude = solarPosition(time, location.latitude, location.longitude).altitude;
     const magnitude = approximateMagnitude(planet, equatorial.distanceAu);
     const threshold = practicalThreshold(planet, magnitude, sunAltitude);
-    const practical = horizontal.altitude >= threshold && (sunAltitude <= 0 || planet === 'Venus' || planet === 'Jupiter');
+    const practical = horizontal.altitude >= threshold && sunAltitude <= (planet === 'Venus' ? -2 : -6);
 
     if (previousAltitude <= 0 && horizontal.altitude > 0) rise = time;
     if (previousAltitude >= 0 && horizontal.altitude < 0) set = time;
@@ -230,10 +231,8 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
     }
     wasAbove = wasAbove || practical;
     previousAltitude = horizontal.altitude;
-    previousTime = time;
   }
 
-  void previousTime;
   const minimumMinutes = planet === 'Mercury' ? 10 : planet === 'Venus' ? 15 : planet === 'Uranus' || planet === 'Neptune' ? 30 : 20;
   const nakedEyePlausible = definition.nakedEye && (bestMagnitude === null || bestMagnitude <= 2.5);
   const visible = wasAbove && usefulMinutes >= minimumMinutes && (definition.nakedEye ? nakedEyePlausible : false);
@@ -253,15 +252,15 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
 
 export function calculatePlanetConditions(location: PlanetConditionsLocation, now = new Date()): PlanetConditionsData | null {
   if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude) || (location.latitude === 0 && location.longitude === 0)) return null;
-  const { year, month, day } = localDateParts(now, location.timezone.includes('Local timezone') ? Intl.DateTimeFormat().resolvedOptions().timeZone : location.timezone);
   const timezone = location.timezone.includes('Local timezone') ? Intl.DateTimeFormat().resolvedOptions().timeZone : location.timezone;
+  const { year, month, day } = localDateParts(now, timezone);
   const dayStart = zonedTimeToDate(year, month, day, 0, 0, timezone);
   const nextDay = new Date(dayStart.getTime() + DAY_MS);
   const sunset = findSolarCrossing(dayStart, nextDay, location.latitude, location.longitude, -0.833) ?? findSolarCrossing(dayStart, nextDay, location.latitude, location.longitude, 0);
   if (!sunset) return null;
   const windowEnd = zonedTimeToDate(year, month, day, 21, 0, timezone);
   const planets = (Object.keys(PLANETS) as PlanetName[]).map((planet) => scanPlanet(planet, location, sunset, windowEnd));
-  return { sunset, windowEnd, planets: planets.filter((planet) => planet.name !== 'Uranus' && planet.name !== 'Neptune' || planet.visible) };
+  return { sunset, windowEnd, planets: planets.filter((planet) => (planet.name !== 'Uranus' && planet.name !== 'Neptune') || planet.visible) };
 }
 
 export function formatPlanetTime(date: Date, timezone: string): string {
