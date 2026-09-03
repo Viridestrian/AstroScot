@@ -19,7 +19,24 @@ interface MoonData { phase: number; illumination: number; phaseName: string; mes
 const eclipseDates = [{ date: '2028-12-31', type: 'Blood Moon' }, { date: '2029-06-26', type: 'Blood Moon' }, { date: '2029-12-20', type: 'Blood Moon' }, { date: '2032-04-25', type: 'Blood Moon' }, { date: '2032-10-18', type: 'Blood Moon' }, { date: '2033-04-14', type: 'Blood Moon' }, { date: '2033-10-08', type: 'Blood Moon' }];
 function safeTimezone(timezone: string) { return timezone.includes('Local timezone') ? Intl.DateTimeFormat().resolvedOptions().timeZone : timezone; }
 async function searchLocations(query: string): Promise<GeocodingResult[]> { const params = new URLSearchParams({ name: query, count: '5', language: 'en', format: 'json' }); const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`); if (!response.ok) throw new Error(`Location search failed with status ${response.status}`); const data = (await response.json()) as GeocodingResponse; return data.results ?? []; }
-async function fetchWeather(location: AstroScotLocation): Promise<WeatherResponse> { const params = new URLSearchParams({ latitude: String(location.latitude), longitude: String(location.longitude), current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m', hourly: 'precipitation_probability,rain,weather_code', daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset', temperature_unit: 'fahrenheit', wind_speed_unit: 'mph', timezone: 'auto' }); const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`); if (!response.ok) throw new Error(`Weather request failed with status ${response.status}`); const data = (await response.json()) as WeatherResponse; if (!data.current || !data.hourly || !data.daily || !data.daily.time?.length) throw new Error('Weather response was incomplete'); return data; }
+async function fetchWeather(location: AstroScotLocation): Promise<WeatherResponse> {
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    current: 'temperature_2m,apparent_temperature,weather_code,wind_speed_10m',
+    hourly: 'precipitation_probability,rain,weather_code',
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
+    temperature_unit: 'fahrenheit',
+    wind_speed_unit: 'mph',
+    timezone: 'auto',
+    forecast_days: '1'
+  });
+  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!response.ok) throw new Error(`Weather request failed with status ${response.status}`);
+  const data = (await response.json()) as WeatherResponse;
+  if (!data.current || !data.hourly || !data.daily || !Array.isArray(data.hourly.time) || !Array.isArray(data.hourly.precipitation_probability) || !Array.isArray(data.hourly.rain) || !Array.isArray(data.hourly.weather_code) || !Array.isArray(data.daily.time) || !Array.isArray(data.daily.weather_code) || !Array.isArray(data.daily.temperature_2m_max) || !Array.isArray(data.daily.temperature_2m_min) || !Array.isArray(data.daily.precipitation_probability_max) || !Array.isArray(data.daily.sunrise) || !Array.isArray(data.daily.sunset) || data.daily.time.length === 0) throw new Error('Weather response was incomplete');
+  return data;
+}
 function formatLocation(result: GeocodingResult) { const region = result.admin1 || result.country || ''; return region ? `${result.name}, ${region}` : result.name; }
 function weatherDescription(code: number) { if (code === 0) return 'Clear sky'; if (code === 1) return 'Mostly clear'; if (code === 2) return 'Partly cloudy'; if (code === 3) return 'Cloudy'; if ([45, 48].includes(code)) return 'Foggy'; if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle'; if ([61, 63, 65, 66, 67].includes(code)) return 'Rainy'; if ([71, 73, 75, 77].includes(code)) return 'Snowy'; if ([80, 81, 82].includes(code)) return 'Rain showers'; if ([85, 86].includes(code)) return 'Snow showers'; if ([95, 96, 99].includes(code)) return 'Thunderstorms'; return 'Mixed weather'; }
 function weatherIcon(code: number) { if (code === 0) return '☀️'; if ([1, 2].includes(code)) return '🌤️'; if (code === 3) return '☁️'; if ([45, 48].includes(code)) return '🌫️'; if ([51, 53, 55, 56, 57].includes(code)) return '🌦️'; if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return '🌧️'; if ([71, 73, 75, 77, 85, 86].includes(code)) return '🌨️'; if ([95, 96, 99].includes(code)) return '⛈️'; return '🌤️'; }
