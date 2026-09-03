@@ -22,10 +22,20 @@ export interface PlanetCondition {
   visibleUntil: Date | null;
 }
 
+export interface UpcomingPlanetOpportunity {
+  name: PlanetName;
+  symbol: string;
+  startDate: Date;
+  endDate: Date;
+  daysUntilStart: number;
+  bestTime: Date | null;
+}
+
 export interface PlanetConditionsData {
   sunset: Date;
   windowEnd: Date;
   planets: PlanetCondition[];
+  upcoming: UpcomingPlanetOpportunity[];
 }
 
 type OrbitalElements = {
@@ -40,6 +50,8 @@ type OrbitalElements = {
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
 const DAY_MS = 86400000;
+const FUTURE_LOOKAHEAD_DAYS = 90;
+const MIN_UPCOMING_RUN_DAYS = 3;
 
 const PLANETS: Record<PlanetName, { symbol: string; elements: (d: number) => OrbitalElements; magnitudeBase: number; magnitudeSlope: number; nakedEye: boolean }> = {
   Mercury: { symbol: '☿', elements: mercuryElements, magnitudeBase: -0.4, magnitudeSlope: 0.03, nakedEye: true },
@@ -256,6 +268,78 @@ function scanPlanet(planet: PlanetName, location: PlanetConditionsLocation, suns
   return { name: planet, symbol: definition.symbol, visible, status, reason, bestTime, bestAltitude, direction: bestTime ? directionName(bestAzimuth) : null, magnitude: bestMagnitude, rise, set, visibleFrom, visibleUntil };
 }
 
+function futureSunsetForDate(date: Date, location: PlanetConditionsLocation): Date | null {
+  const { year, month, day } = localDateParts(date, location.timezone);
+  const dayStart = zonedTimeToDate(year, month, day, 0, 0, location.timezone);
+  const nextDay = new Date(dayStart.getTime() + DAY_MS);
+  return findSolarCrossing(dayStart, nextDay, location.latitude, location.longitude, -0.833)
+    ?? findSolarCrossing(dayStart, nextDay, location.latitude, location.longitude, 0);
+}
+
+function findUpcomingPlanetOpportunities(
+  location: PlanetConditionsLocation,
+  currentConditions: PlanetCondition[],
+  now: Date,
+): UpcomingPlanetOpportunity[] {
+  const currentVisible = new Set(currentConditions.filter((planet) => planet.visible).map((planet) => planet.name));
+  const futureRuns: UpcomingPlanetOpportunity[] = [];
+
+  for (const planet of Object.keys(PLANETS) as PlanetName[]) {
+    if (currentVisible.has(planet)) continue;
+    if (!PLANETS[planet].nakedEye) continue;
+
+    let runStart: Date | null = null;
+    let runEnd: Date | null = null;
+    let runBestTime: Date | null = null;
+
+    const finishRun = () => {
+      if (!runStart || !runEnd) return;
+      const runDays = Math.round((runEnd.getTime() - runStart.getTime()) / DAY_MS) + 1;
+      if (runDays >= MIN_UPCOMING_RUN_DAYS) {
+        const startDate = runStart;
+        futureRuns.push({
+          name: planet,
+          symbol: PLANETS[planet].symbol,
+          startDate,
+          endDate: runEnd,
+          daysUntilStart: Math.max(1, Math.round((startDate.getTime() - now.getTime()) / DAY_MS)),
+          bestTime: runBestTime,
+        });
+      }
+      runStart = null;
+      runEnd = null;
+      runBestTime = null;
+    };
+
+    for (let dayOffset = 1; dayOffset <= FUTURE_LOOKAHEAD_DAYS; dayOffset += 1) {
+      const date = new Date(now.getTime() + dayOffset * DAY_MS);
+      const sunset = futureSunsetForDate(date, location);
+      if (!sunset) {
+        finishRun();
+        continue;
+      }
+      const windowEnd = zonedTimeToDate(...Object.values(localDateParts(date, location.timezone)) as [number, number, number], 21, 0, location.timezone);
+      const condition = scanPlanet(planet, location, sunset, windowEnd);
+
+      if (condition.visible) {
+        if (!runStart) runStart = sunset;
+        runEnd = sunset;
+        if (!runBestTime && condition.bestTime) runBestTime = condition.bestTime;
+      } else {
+        finishRun();
+      }
+    }
+    finishRun();
+  }
+
+  return futureRuns.sort((a, b) => {
+    if (a.daysUntilStart !== b.daysUntilStart) return a.daysUntilStart - b.daysUntilStart;
+    const aDuration = a.endDate.getTime() - a.startDate.getTime();
+    const bDuration = b.endDate.getTime() - b.startDate.getTime();
+    return bDuration - aDuration;
+  });
+}
+
 export function calculatePlanetConditions(location: PlanetConditionsLocation, now = new Date()): PlanetConditionsData | null {
   if (!Number.isFinite(location.latitude) || !Number.isFinite(location.longitude) || (location.latitude === 0 && location.longitude === 0)) return null;
   const timezone = location.timezone.includes('Local timezone') ? Intl.DateTimeFormat().resolvedOptions().timeZone : location.timezone;
@@ -266,7 +350,9 @@ export function calculatePlanetConditions(location: PlanetConditionsLocation, no
   if (!sunset) return null;
   const windowEnd = zonedTimeToDate(year, month, day, 21, 0, timezone);
   const planets = (Object.keys(PLANETS) as PlanetName[]).map((planet) => scanPlanet(planet, location, sunset, windowEnd));
-  return { sunset, windowEnd, planets: planets.filter((planet) => (planet.name !== 'Uranus' && planet.name !== 'Neptune') || planet.visible) };
+  const visiblePlanets = planets.filter((planet) => (planet.name !== 'Uranus' && planet.name !== 'Neptune') || planet.visible);
+  const upcoming = findUpcomingPlanetOpportunities(location, visiblePlanets, now);
+  return { sunset, windowEnd, planets: visiblePlanets, upcoming };
 }
 
 export function formatPlanetTime(date: Date, timezone: string): string {
