@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { AstroScotLocation } from '@astroscot/shared';
-import { calculatePlanetConditions, formatPlanetTime, type PlanetConditionsData, type UpcomingPlanetOpportunity } from '../astronomy/planetConditions';
+import { calculatePlanetConditions, formatPlanetTime, type PlanetConditionsData, type PlanetCondition, type UpcomingPlanetOpportunity } from '../astronomy/planetConditions';
 
-function statusLabel(status: 'good' | 'possible' | 'not-recommended') {
-  if (status === 'good') return 'Good target';
-  if (status === 'possible') return 'Possible';
+function statusLabel(planet: PlanetCondition) {
+  if (planet.tier === 'low') return 'Very low in the sky';
+  if (planet.tier === 'advanced') return 'Advanced target';
+  if (planet.status === 'good') return 'Good target';
+  if (planet.status === 'possible') return 'Possible';
   return 'Skip tonight';
 }
 
@@ -57,7 +59,7 @@ export function PlanetCard({ location }: { location: AstroScotLocation }) {
   const upcomingPlanets = conditions.upcoming.slice(0, Math.max(0, 3 - visiblePlanets.length));
 
   return <article className="info-card planet-card"><div className="card-header"><div><p className="card-eyebrow">Planets</p></div></div><div className="planet-content"><div className="planet-list">
-    {visiblePlanets.map((planet) => <div className="planet-item" key={planet.name}><div className="planet-item-title"><span aria-hidden="true">{planet.symbol}</span><strong>{planet.name}</strong></div><span>{statusLabel(planet.status)} · {planet.direction ?? 'Look up'}</span><p>{viewingWindow(planet.visibleFrom, planet.visibleUntil, conditions.sunset, location.timezone) ?? 'Look during the evening.'} {planet.bestTime ? `Best time to look will be around ${formatApproximatePlanetTime(planet.bestTime, location.timezone)}.` : ''} {planet.reason}{planet.bestAltitude !== null ? ` ${heightDescription(planet.bestAltitude)}.` : ''}</p></div>)}
+    {visiblePlanets.map((planet) => <div className="planet-item" key={planet.name}><div className="planet-item-title"><span aria-hidden="true">{planet.symbol}</span><strong>{planet.name}</strong></div><span>{statusLabel(planet)} · {planet.direction ?? 'Look up'}</span><p>{viewingWindow(planet.visibleFrom, planet.visibleUntil, conditions.sunset, location.timezone) ?? 'Look during the evening.'} {planet.bestTime ? `Best time to look will be around ${formatApproximatePlanetTime(planet.bestTime, location.timezone)}.` : ''} {planet.reason}{planet.bestAltitude !== null ? ` ${heightDescription(planet.bestAltitude)}.` : ''}</p></div>)}
     {upcomingPlanets.map((planet) => <div className="planet-item" key={`upcoming-${planet.name}`}><div className="planet-item-title"><span aria-hidden="true">{planet.symbol}</span><strong>{planet.name}</strong></div><span>Coming soon · {planet.daysUntilStart <= 1 ? 'tomorrow' : `about ${planet.daysUntilStart} days`}</span><p>{upcomingDescription(planet, location.timezone)}</p></div>)}
     {visiblePlanets.length === 0 && upcomingPlanets.length === 0 && <div className="planet-item"><div className="planet-item-title"><span aria-hidden="true">🔭</span><strong>No easy planet targets yet</strong></div><span>Looking ahead</span><p>My Sky Ally is checking the next few weeks for a good evening planet target.</p></div>}
   </div></div></article>;
