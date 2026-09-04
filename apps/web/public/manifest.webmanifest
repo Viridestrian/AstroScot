@@ -2,16 +2,16 @@
   "name": "My Sky Ally",
   "short_name": "My Sky Ally",
   "description": "A friendly daily weather and sky guide for children.",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#172554",
   "theme_color": "#172554",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/astroscot-icon.svg",
+      "src": "../../MSA-icon.PNG",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
