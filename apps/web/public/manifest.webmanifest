@@ -9,7 +9,7 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "../../MSA-icon.PNG",
+      "src": "./MSA-icon.PNG",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
